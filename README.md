@@ -2,7 +2,7 @@
 
 **Scenario Default:** The Tesselated Sea, Year 719 After the Sundering (A.S.)
 
-An experimental single-file HTML simulation where civilizations rise, trade, war, and collapse on an abstract hex map. Built with vanilla JS + Canvas, no dependencies.
+An experimental HTML simulation where civilizations rise, trade, war, and collapse on an abstract hex map. Built with vanilla JS + Canvas and organized into separate CSS and JavaScript files, no external dependencies.
 
 ## 📖 The World
 - **The Tesselated Sea:** An inland sea shaped by peninsulas, straits, and archipelagos.
@@ -52,7 +52,7 @@ Export JSON save files or plain-text world reports for analysis.
 Toggle overlay to show FPS, event counts, trade route stats, warnings (low morale/prosperity). Includes a deterministic “War → Blockade → Colonization → Peace” test sequence.
 
 ## 🎮 How to Play
-1. Open `Simulation.html` in a browser.
+1. Open `Simulation File v2.html` in a browser.
 2. Pick a civ in the left panel.
 3. Adjust sliders (Religion, Economy, etc.) — watch tooltips explain effects and preview “what-if” changes.
 4. Press ▶ Start and watch borders, convoys, raids, and events unfold.
@@ -65,7 +65,7 @@ Try presets:
 - Bronze Age Collapse 1200 BCE (Sea Peoples invasions)
 
 ## 🚀 Development Notes
-- Single file: No build tools, no external assets.
+- Minimal setup: No build tools or external assets. Styles live in `simulation/style.css` and logic in `simulation/main.js`.
 - `BALANCE` object: All formulas and weights centralized for easy tuning.
 - Canvas rendering: Efficient redraw of hex grid, convoys, halos, and battle flares.
 - Accessibility: Keyboard shortcuts (Space = Run/Pause, N = Step, T = Test Mode).

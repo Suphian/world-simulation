@@ -489,7 +489,7 @@
         <div class="swatch" style="background:#FFD166; margin-left:10px"></div> KHA
         
       </div>
-      <div class="small">Legend: Capitals (★), Resource hexes (two‑letter codes), Neutral (•), Outer Shoals (⚑). Trade: arrowheads mark entry ▶ and exit ◀ points; <span class="badge-blocked">striped</span> = blocked.</div>
+      <div class="small">Legend: Capitals (★), Resource hexes (two‑letter codes), Neutral (•), Outer Shoals (⚑). Trade routes are lines; <span class="badge-blocked">striped</span> = blocked.</div>
     </div>
 
     <div class="news" id="newsPanel">
@@ -1039,6 +1039,9 @@ function computeTradeRoutes(){
     const owner=map.hexes[capId].owner;
     for(const resId of resHexes){
       const R=map.hexes[resId]; if(R.type!=='land') continue;
+      // Exclusivity: if a resource hex is owned (colonized/controlled) by another civ,
+      // do not generate a trade route to it.
+      if(R.owner && R.owner!==owner) continue;
       let path=null, type=null;
       // overland
       path=pathfind(capId,resId,'land');
@@ -1299,6 +1302,8 @@ function colonizationTick(){
       const [x, y] = axialToPixel(hex.q, hex.r, 20);
       logEvent(`🏝️ ${col.civId} established a colony.`, null, {x, y});
       if(!hex.resource && rnd()<0.4){ const rt=pick(['Grain','Ironwood','Auric Salts','Sky‑Amber']); hex.resource=rt; map.resourceHexes.push(hex.id); logEvent(`🔎 ${col.civId} discovered ${rt} at the colony.`, null, {x, y}); }
+      // Ensure exclusivity: once colonized, this resource is considered owned by the civ
+      // and should not be targeted by other civs' routes. Routes will be recomputed each tick.
     }
   }
   state.colonizations=state.colonizations.filter(c=>c.progress<BALANCE.tick.colonizeTicks);
@@ -1618,6 +1623,8 @@ function exportTextReport(){
 
 /* ----------------------------- Newsfeed ---------------------------------- */
 const newsEl=document.getElementById('newsText'), btnCopyNews=document.getElementById('btnCopyNews');
+// Render a civ ID using its map color for consistent coloring across UI
+function civLabel(id){ const c=getCiv(id); const col=c?.color||'#bcd5ff'; return `<span class="badge" style="background:${col}22;border-color:${col}">${id}</span>`; }
 btnCopyNews.addEventListener('click', async()=>{
   try{ await navigator.clipboard.writeText(state.news); toast('📋 Copied summary.'); }catch(e){ toast('⚠️ Clipboard blocked','Select text and copy.'); }
 });
@@ -1629,7 +1636,7 @@ function renderWorldSummary(){
   const richest2=[...state.civs].sort((a,b)=>b.treasury-a.treasury)[0];
   if(richest&&richest2) newsItems.push({
     bullet: '💰',
-    text: `<span class="news-highlight">${richest.id}</span> leads in prosperity, while <span class="news-highlight">${richest2.id}</span> holds the deepest coffers.`,
+    text: `${civLabel(richest.id)} leads in prosperity, while ${civLabel(richest2.id)} holds the deepest coffers.`,
     type: 'economy'
   });
   
@@ -1638,7 +1645,7 @@ function renderWorldSummary(){
     const w=state.wars[0]; 
     newsItems.push({
       bullet: '⚔️',
-      text: `War rages between <span class="news-warning">${w.a}</span> and <span class="news-warning">${w.b}</span>; contested hexes flare as fronts shift.`,
+      text: `War rages between ${civLabel(w.a)} and ${civLabel(w.b)}; contested hexes flare as fronts shift.`,
       type: 'war'
     });
   } else {
@@ -1655,7 +1662,7 @@ function renderWorldSummary(){
     const hasBlockades = state.routes.some(r=>r.blocked);
     newsItems.push({
       bullet: '🚢',
-      text: `<span class="news-highlight">${topTrade.id}</span> moves the most cargo this tick as convoys thread the lanes${hasBlockades ? ', despite strait blockades.' : '.'}`,
+      text: `${civLabel(topTrade.id)} moves the most cargo this tick as convoys thread the lanes${hasBlockades ? ', despite strait blockades.' : '.'}`,
       type: 'trade'
     });
   }
@@ -1688,7 +1695,7 @@ function renderWorldSummary(){
   if(hiP) {
     newsItems.push({
       bullet: '🌊',
-      text: `External pressure bears heaviest on <span class="news-warning">${hiP.id}</span>, inviting allies if thresholds are crossed.`,
+      text: `External pressure bears heaviest on ${civLabel(hiP.id)}, inviting allies if thresholds are crossed.`,
       type: 'pressure'
     });
   }
@@ -1698,7 +1705,7 @@ function renderWorldSummary(){
   if(mostInnovative) {
     newsItems.push({
       bullet: '🔬',
-      text: `<span class="news-info">${mostInnovative.id}</span> leads in innovation, with scholars pushing the boundaries of knowledge.`,
+      text: `${civLabel(mostInnovative.id)} leads in innovation, with scholars pushing the boundaries of knowledge.`,
       type: 'innovation'
     });
   }
@@ -1708,7 +1715,7 @@ function renderWorldSummary(){
   if(highestMorale) {
     newsItems.push({
       bullet: '💪',
-      text: `<span class="news-success">${highestMorale.id}</span> enjoys the highest morale, with citizens united in purpose.`,
+      text: `${civLabel(highestMorale.id)} enjoys the highest morale, with citizens united in purpose.`,
       type: 'morale'
     });
   }
@@ -1792,7 +1799,7 @@ function drawHex(cx,cy,r, fill, stroke){
 function hexFillColor(h){
   if(h.type==='sea') return '#0a1624';
   if(h.type==='shoals') return '#0f1f2f';
-  if(h.owner){ const c=getCiv(h.owner).color; return shadeColor(c,0.55); }
+  if(h.owner){ const c=getCiv(h.owner).color; return c; }
   return '#101a2b';
 }
 
@@ -1833,14 +1840,7 @@ function drawRoutes(){
     const pathSegLens=[], pathCum=[0]; for(let i=1;i<pathPts.length;i++){ const d=Math.hypot(pathPts[i][0]-pathPts[i-1][0], pathPts[i][1]-pathPts[i-1][1]); pathSegLens.push(d); pathCum.push(pathCum[i-1]+d); }
     const pathTotal=pathCum[pathCum.length-1]||1;
     function pointAt(t){ const dist=t*pathTotal; let idx=pathSegLens.findIndex((len,i)=>pathCum[i+1]>dist); if(idx<0) idx=pathSegLens.length-1; const segStart=pathCum[idx], segLen=pathSegLens[idx]||1, segT=(dist-segStart)/segLen; const [x1,y1]=pathPts[idx], [x2,y2]=pathPts[idx+1]||pathPts[idx]; return [lerp(x1,x2,segT), lerp(y1,y2,segT)]; }
-    // Entry/Exit arrowheads to reduce clutter
-    const [sx,sy]=pointAt(0.12), [s2x,s2y]=pointAt(0.16);
-    const [ex,ey]=pointAt(0.88), [e2x,e2y]=pointAt(0.84);
-    const startAng=Math.atan2(s2y-sy, s2x-sx);
-    const endAng=Math.atan2(e2y-ey, e2x-ex);
-    const arrowColor = convoyOwner ? convoyOwner.color : '#a9d4ff';
-    ctx.save(); ctx.translate(sx,sy); ctx.rotate(startAng); ctx.globalAlpha=0.9; ctx.fillStyle=arrowColor; ctx.font='bold 11px system-ui'; ctx.fillText('▶', -5, 4); ctx.restore();
-    ctx.save(); ctx.translate(ex,ey); ctx.rotate(endAng); ctx.globalAlpha=0.9; ctx.fillStyle=arrowColor; ctx.font='bold 11px system-ui'; ctx.fillText('◀', -5, 4); ctx.restore();
+    // No entry/exit markers to reduce clutter
 
     // blockade badge
     if(route.blocked && route.blockadeAt!=null){
@@ -1989,15 +1989,17 @@ function draw(){
     ctx.restore();
   }
 
-  // Colonization halos
+  // Colonization halos — match owning civ color
   for(const col of state.colonizations){
     const h=map.hexes[col.hexId]; const [x,y]=axialToPixel(h.q,h.r,R);
     const t=(col.progress/BALANCE.tick.colonizeTicks);
-    ctx.strokeStyle=`rgba(174,230,122,${0.9-t*0.7})`; ctx.lineWidth=2;
+    const civCol=(getCiv(col.civId)?.color)||'#aee67a';
+    const c1=`${civCol}AA`; // outer alpha
+    const c2=`${civCol}77`; // inner alpha
+    ctx.strokeStyle=c1; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(x,y, R*(0.6 + 0.4*Math.sin(state.tick/10)), 0, Math.PI*2); ctx.stroke();
     // pulsing flash ring to make expansion obvious
-    ctx.strokeStyle=`rgba(174,230,122,${0.4 + 0.3*Math.sin(state.tick/8)})`;
-    ctx.lineWidth=3;
+    ctx.strokeStyle=c2; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(x,y, R*(0.9 + 0.1*Math.sin(state.tick/6)), 0, Math.PI*2); ctx.stroke();
   }
 

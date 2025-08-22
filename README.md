@@ -24,7 +24,7 @@ Each civ has six pillars plus secondary stats (population, infrastructure, healt
 ## 🪧 Pillars & Derived Indices
 
 ### Pillars
-Religion, Government, Goods/Economy, Writing/Knowledge, Arts/Culture, and Social Structure define a civilization’s character. Adjust the sliders to see immediate effects.
+Religion, Government, Goods/Economy, Writing/Knowledge, Arts/Culture, and Social Structure define a civilization's character. Adjust the sliders to see immediate effects.
 
 ### Derived Indices
 - **Prosperity** – wealth & quality of life  
@@ -49,12 +49,12 @@ Religion, Government, Goods/Economy, Writing/Knowledge, Arts/Culture, and Social
 
 ## 💾 Save/Load & Test Mode
 - Export JSON save files or plain-text world reports for analysis.
-- Test mode toggles an overlay for FPS, event counts, trade route stats, and warnings with a deterministic “War → Blockade → Colonization → Peace” sequence.
+- Test mode toggles an overlay for FPS, event counts, trade route stats, and warnings with a deterministic "War → Blockade → Colonization → Peace" sequence.
 
 ## 🎮 How to Play
 1. Open `Simulation.html` in a browser.
 2. Pick a civ in the left panel.
-3. Adjust pillars via the sliders — tooltips explain effects and preview “what-if” changes.
+3. Adjust pillars via the sliders — tooltips explain effects and preview "what-if" changes.
 4. Press ▶ Start and watch borders, convoys, raids, and events unfold.
 5. Follow the World Newsfeed for high-level summaries.
 6. Export reports or JSON saves anytime.

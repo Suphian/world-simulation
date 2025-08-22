@@ -70,5 +70,5 @@ Try presets:
 - Canvas rendering: Efficient redraw of hex grid, convoys, halos, and battle flares.
 - Accessibility: Keyboard shortcuts (Space = Run/Pause, N = Step, T = Test Mode).
 - Context Docs: See `/simulation/context/tess_sim_cursor_context.md` for full world bible and formulas.
-- Patches: Modular extensions (like slider hover help) live under `/simulation/patches/`.
+- Patches: Planned modular extensions (e.g., slider hover help) will eventually live under `/simulation/patches/` (directory not yet included).
 

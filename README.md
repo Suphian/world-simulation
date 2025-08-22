@@ -52,7 +52,7 @@ Export JSON save files or plain-text world reports for analysis.
 Toggle overlay to show FPS, event counts, trade route stats, warnings (low morale/prosperity). Includes a deterministic “War → Blockade → Colonization → Peace” test sequence.
 
 ## 🎮 How to Play
-1. Open `Simulation File v2.html` in a browser.
+1. Open `index.html` in a browser.
 2. Pick a civ in the left panel.
 3. Adjust sliders (Religion, Economy, etc.) — watch tooltips explain effects and preview “what-if” changes.
 4. Press ▶ Start and watch borders, convoys, raids, and events unfold.

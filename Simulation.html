@@ -72,6 +72,12 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     border-color: #2a3852;
   }
+  /* Collapsible identity cards */
+  .card > summary { display:flex; align-items:center; gap:12px; cursor:pointer; outline:none; list-style:none }
+  .card > summary::-webkit-details-marker { display:none }
+  .card .caret { margin-left:auto; opacity:0.75; transition:transform 0.2s ease }
+  .card[open] .caret { transform:rotate(180deg) }
+  .card-body { margin-top:8px }
   .idtag{
     display:flex; 
     align-items:center; 
@@ -483,7 +489,7 @@
         <div class="swatch" style="background:#FFD166; margin-left:10px"></div> KHA
         
       </div>
-      <div class="small">Legend: Capitals (★), Resource hexes (two‑letter codes), Neutral (•), Outer Shoals (⚑). Trade: filled = outgoing (sender), ring = incoming (receiver), <span class="badge-blocked">striped</span> = blocked.</div>
+      <div class="small">Legend: Capitals (★), Resource hexes (two‑letter codes), Neutral (•), Outer Shoals (⚑). Trade: arrowheads mark entry ▶ and exit ◀ points; <span class="badge-blocked">striped</span> = blocked.</div>
     </div>
 
     <div class="news" id="newsPanel">
@@ -1443,34 +1449,36 @@ const idCardsEl=document.getElementById('idCards');
 function renderIdentityCards(){
   idCardsEl.innerHTML='';
   for(const c of state.civs){
-    const card=document.createElement('div'); 
+    const card=document.createElement('details');
     card.className='card';
+    card.open=true;
     card.style.setProperty('--civ-color', c.color);
-    
     card.innerHTML=`
-      <div class="idtag">
-        <div class="swatch" style="background:${c.color}"></div>
-        <span>${c.name}</span>
-        <span class="badge" style="background:${c.color}22;border-color:${c.color}">${c.id}</span>
-      </div>
-      <div class="motto">${c.motto}</div>
-      
-      <div class="card-section">
-        <div class="card-label">Religion & Government</div>
-        <div class="card-value">
-          <strong>${c.religion}</strong> • <strong>${c.government}</strong>
+      <summary>
+        <div class="idtag">
+          <div class="swatch" style="background:${c.color}"></div>
+          <span>${c.name}</span>
+          <span class="badge" style="background:${c.color}22;border-color:${c.color}">${c.id}</span>
+          <span class="caret">▾</span>
         </div>
-      </div>
-      
-      <div class="card-section">
-        <div class="card-label">Military Doctrine</div>
-        <div class="card-value">${c.armyFlavor}</div>
-      </div>
-      
-      <div class="card-section">
-        <div class="card-label">Key Strengths</div>
-        <div class="strengths-list">
-          ${c.strengths.map(strength => `<span class="strength-tag">${strength}</span>`).join('')}
+      </summary>
+      <div class="card-body">
+        <div class="motto">${c.motto}</div>
+        <div class="card-section">
+          <div class="card-label">Religion & Government</div>
+          <div class="card-value">
+            <strong>${c.religion}</strong> • <strong>${c.government}</strong>
+          </div>
+        </div>
+        <div class="card-section">
+          <div class="card-label">Military Doctrine</div>
+          <div class="card-value">${c.armyFlavor}</div>
+        </div>
+        <div class="card-section">
+          <div class="card-label">Key Strengths</div>
+          <div class="strengths-list">
+            ${c.strengths.map(strength => `<span class="strength-tag">${strength}</span>`).join('')}
+          </div>
         </div>
       </div>`;
     idCardsEl.appendChild(card);
@@ -1807,29 +1815,32 @@ function drawRoutes(){
   ctx.save(); const R=BALANCE.geography.hexRadius;
   const paused = !state.running;
   for(const route of state.routes){
-    // path polyline
-    let prev=null; ctx.beginPath();
-    for(const id of route.via){
-      const [x,y]=axialToPixel(map.hexes[id].q, map.hexes[id].r, R);
-      if(!prev){ ctx.moveTo(x,y); prev=[x,y]; } else { ctx.lineTo(x,y); prev=[x,y]; }
-    }
+    const isResourceRoute = !!route.res;
+
+    // For resource routes, flow is from resource to capital. For others, from->to.
+    const pathHexIds = isResourceRoute ? route.via.slice().reverse() : route.via;
+    const pathPts = pathHexIds.map(id => axialToPixel(map.hexes[id].q, map.hexes[id].r, R));
+
+    // Draw path polyline
+    ctx.beginPath();
+    pathPts.forEach((pt, i) => i === 0 ? ctx.moveTo(pt[0], pt[1]) : ctx.lineTo(pt[0], pt[1]));
     ctx.strokeStyle = route.type==='sea' ? 'rgba(100,180,255,0.35)' : 'rgba(240,210,120,0.35)';
     ctx.lineWidth=1.6; ctx.stroke();
 
-    // Markers: origin (filled) & destination (ring)
-    const senderId = map.hexes[route.from].owner;
-    const recvId = map.hexes[route.to].owner;
-    const sender = getCiv(senderId); const receiver=getCiv(recvId);
-    const pathPts=route.via.map(id=>axialToPixel(map.hexes[id].q,map.hexes[id].r,R));
+    // Determine color by economic beneficiary
+    const convoyOwner = getCiv(route.ownerA);
+
     const pathSegLens=[], pathCum=[0]; for(let i=1;i<pathPts.length;i++){ const d=Math.hypot(pathPts[i][0]-pathPts[i-1][0], pathPts[i][1]-pathPts[i-1][1]); pathSegLens.push(d); pathCum.push(pathCum[i-1]+d); }
     const pathTotal=pathCum[pathCum.length-1]||1;
     function pointAt(t){ const dist=t*pathTotal; let idx=pathSegLens.findIndex((len,i)=>pathCum[i+1]>dist); if(idx<0) idx=pathSegLens.length-1; const segStart=pathCum[idx], segLen=pathSegLens[idx]||1, segT=(dist-segStart)/segLen; const [x1,y1]=pathPts[idx], [x2,y2]=pathPts[idx+1]||pathPts[idx]; return [lerp(x1,x2,segT), lerp(y1,y2,segT)]; }
-    const [ox,oy]=pointAt(0.10), [dx,dy]=pointAt(0.90);
-    const ms=BALANCE.routes.markerSize, rw=BALANCE.routes.markerRingWidth;
-    // origin filled
-    if(sender){ ctx.fillStyle=sender.color; ctx.beginPath(); ctx.arc(ox,oy,ms,0,Math.PI*2); ctx.fill(); }
-    // destination ring
-    if(receiver){ ctx.strokeStyle=receiver.color; ctx.lineWidth=rw; ctx.beginPath(); ctx.arc(dx,dy,ms+rw,0,Math.PI*2); ctx.stroke(); }
+    // Entry/Exit arrowheads to reduce clutter
+    const [sx,sy]=pointAt(0.12), [s2x,s2y]=pointAt(0.16);
+    const [ex,ey]=pointAt(0.88), [e2x,e2y]=pointAt(0.84);
+    const startAng=Math.atan2(s2y-sy, s2x-sx);
+    const endAng=Math.atan2(e2y-ey, e2x-ex);
+    const arrowColor = convoyOwner ? convoyOwner.color : '#a9d4ff';
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(startAng); ctx.globalAlpha=0.9; ctx.fillStyle=arrowColor; ctx.font='bold 11px system-ui'; ctx.fillText('▶', -5, 4); ctx.restore();
+    ctx.save(); ctx.translate(ex,ey); ctx.rotate(endAng); ctx.globalAlpha=0.9; ctx.fillStyle=arrowColor; ctx.font='bold 11px system-ui'; ctx.fillText('◀', -5, 4); ctx.restore();
 
     // blockade badge
     if(route.blocked && route.blockadeAt!=null){
@@ -1838,14 +1849,12 @@ function drawRoutes(){
       ctx.save(); ctx.translate(bx+4,by-6); ctx.scale(0.8,0.8); ctx.fillStyle='rgba(255,110,110,0.9)'; ctx.font='bold 12px system-ui'; ctx.fillText('blocked',0,0); ctx.restore();
     }
 
-    // convoy/flow dots (sender color)
+    // convoy/flow dots (economic beneficiary color)
     for(const dot of route.convoys){
       const speedMul = (route.blocked||paused)?0.0:1.0; // pause on blocked or paused
       dot.t += BALANCE.tick.convoySpeed * speedMul; if(dot.t>1){ dot.t-=1; dot.raided=false; }
-      const dist=dot.t*pathTotal; let idx=pathSegLens.findIndex((len,i)=>pathCum[i+1]>dist); if(idx<0) idx=pathSegLens.length-1;
-      const segStart=pathCum[idx], segLen=pathSegLens[idx]||1, segT=(dist-segStart)/segLen;
-      const [x1,y1]=pathPts[idx], [x2,y2]=pathPts[idx+1]||pathPts[idx]; const x=lerp(x1,x2,segT), y=lerp(y1,y2,segT);
-      ctx.fillStyle = sender?sender.color:'#a9d4ff';
+      const [x,y] = pointAt(dot.t);
+      ctx.fillStyle = convoyOwner ? convoyOwner.color : '#a9d4ff';
       ctx.beginPath(); ctx.arc(x,y,1.8,0,Math.PI*2); ctx.fill();
       if(dot.flash>0){ ctx.strokeStyle='rgba(255,110,110,'+dot.flash+')'; ctx.beginPath(); ctx.arc(x,y,4+2*dot.flash,0,Math.PI*2); ctx.stroke(); dot.flash=Math.max(0,dot.flash-0.08); }
     }
@@ -1931,7 +1940,27 @@ function draw(){
   for(const h of map.hexes){
     const [x,y]=axialToPixel(h.q,h.r,R);
     drawHex(x,y,R, hexFillColor(h), '#101826');
-    if(h.capital){ ctx.fillStyle='#ffd166'; ctx.font='bold 12px system-ui'; ctx.fillText('★',x-4,y+4); }
+    if(h.capital){
+      // Prominent capital: glowing star + subtle pulsing ring
+      const civ = h.owner ? getCiv(h.owner) : null;
+      const col = civ ? civ.color : '#ffd166';
+      // star glyph with glow
+      ctx.save();
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = '#ffd166';
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('★', x-5, y+5);
+      ctx.restore();
+      // pulsing ring
+      const pulse = 0.75 + 0.08*Math.sin(state.tick/6);
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(x, y, R*pulse, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
     if(h.resource && h.type==='land'){ ctx.fillStyle='#eaf2ff'; ctx.font='10px ui-monospace, monospace'; ctx.fillText(resourceCode(h.resource), x-6, y+4); }
     if(h.strait){ ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(x,y,R*0.5,0,Math.PI*2); ctx.stroke(); }
     if(map.outerShoals.has(h.id)){ ctx.fillStyle='rgba(255,110,110,0.5)'; ctx.font='10px ui-monospace, monospace'; ctx.fillText('⚑', x-3, y+4); }

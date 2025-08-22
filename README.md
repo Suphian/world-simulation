@@ -52,7 +52,7 @@ Export JSON save files or plain-text world reports for analysis.
 Toggle overlay to show FPS, event counts, trade route stats, warnings (low morale/prosperity). Includes a deterministic “War → Blockade → Colonization → Peace” test sequence.
 
 ## 🎮 How to Play
-1. Open `Simulation.html` in a browser.
+1. Open `Simulation File v2.html` in a browser.
 2. Pick a civ in the left panel.
 3. Adjust sliders (Religion, Economy, etc.) — watch tooltips explain effects and preview “what-if” changes.
 4. Press ▶ Start and watch borders, convoys, raids, and events unfold.
@@ -70,5 +70,5 @@ Try presets:
 - Canvas rendering: Efficient redraw of hex grid, convoys, halos, and battle flares.
 - Accessibility: Keyboard shortcuts (Space = Run/Pause, N = Step, T = Test Mode).
 - Context Docs: See `/simulation/context/tess_sim_cursor_context.md` for full world bible and formulas.
-- Patches: Modular extensions (like slider hover help) live under `/simulation/patches/`.
+- Patches: planned modular extensions will live under `/simulation/patches/`.
 

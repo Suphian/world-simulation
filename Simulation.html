@@ -22,14 +22,14 @@
           'Helvetica Neue', Arial, sans-serif;
     font-variant-numeric: tabular-nums lining-nums;
   }
-  .wrap{display:grid; grid-template-columns:320px 1fr 360px; grid-template-rows:auto 1fr auto; height:100vh; position:relative}
+  .wrap{display:grid; grid-template-columns:420px 1fr 320px; grid-template-rows:auto 1fr auto; height:100vh; position:relative}
   header{grid-column:1/4; padding:8px 12px; background:#0f1624; display:flex; gap:12px; align-items:center; border-bottom:1px solid #1c2533}
   aside.controls{grid-column:1; grid-row:2; overflow:auto; background:var(--panel); border-right:1px solid #1b2330; position:relative}
-  main{grid-column:2; grid-row:2; position:relative; background:#0b121d; min-height:560px}
+  main{grid-column:2; grid-row:2; position:relative; background:#0b121d; min-height:720px}
   .hud{grid-column:3; grid-row:2; overflow:auto; background:var(--panel); border-left:1px solid #1b2330; position:relative}
   footer{grid-column:1/4; background:#0f1624; border-top:1px solid #1b2330; max-height:28vh; overflow:auto}
 
-  #map{width:100%; height:100%; display:block; min-height:560px; background:#0b121d; border:1px solid #1b2330}
+  #map{width:100%; height:100%; display:block; min-height:720px; background:#0b121d; border:1px solid #1b2330}
 
   fieldset{border:1px solid #223047; margin:8px; border-radius:8px}
   legend{padding:0 6px; color:#bcd5ff}
@@ -44,6 +44,9 @@
   button:focus, input:focus, select:focus{outline:2px solid #6ea0ff; outline-offset:2px}
 
   .badge{background:#243147; color:#dfe8f5; border-radius:999px; padding:2px 8px; border:1px solid #314461}
+  .btn-primary{background:var(--accent); border-color:var(--accent); color:#0b0f14; font-weight:700}
+  .btn-primary[disabled]{opacity:0.5; cursor:not-allowed}
+  .pending-chip{background:#3a2e18; border-color:#8b6f2a; color:#ffd166}
   .cards{display:grid; grid-template-columns:1fr; gap:12px; padding:12px}
   .card{
     border:1px solid #223047; 
@@ -165,6 +168,13 @@
   .news-warning { color: #ff6e6e; }
   .news-success { color: #7AD37A; }
   .news-info { color: #B66DFF; }
+  /* Fixed civ code colors */
+  .civ-tag{font-weight:600}
+  .civ-tag.SAL{color:#4FA3FF}
+  .civ-tag.LYR{color:#FF6E6E}
+  .civ-tag.THO{color:#7AD37A}
+  .civ-tag.KHA{color:#FFD166}
+  .civ-tag.GLA{color:#B66DFF}
   .resize-handle{position:absolute; bottom:0; left:0; right:0; height:4px; background:linear-gradient(to right, transparent, #4FA3FF, transparent); cursor:ns-resize; opacity:0; transition:opacity 0.2s}
   .resize-handle:hover{opacity:1}
   .news:hover .resize-handle{opacity:0.3}
@@ -191,6 +201,11 @@
   .log{padding:8px 12px}
   .log-entry{border-bottom:1px dashed #2a3852; padding:6px 0}
   .inline{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+  
+  /* Left controls theming to selected civ color */
+  aside.controls{outline:2px solid var(--accent); outline-offset:-2px}
+  aside.controls legend{color:var(--accent)}
+  aside.controls .badge{border-color:var(--accent)}
   
   /* Tooltip styles */
   .tooltip {
@@ -248,8 +263,10 @@
     <fieldset>
       <legend>Simulation Controls</legend>
       <div class="row">
-        <button id="btnRun" aria-label="Start or pause the simulation (Space)">▶️ Start</button>
-        <button id="btnStep" aria-label="Advance one tick (N)">⏭️ Step</button>
+        <button id="btnApplyChanges" aria-label="Apply pending changes" class="btn-primary">Apply</button>
+        <button id="btnStart" aria-label="Start the simulation (Space)">▶️ Start</button>
+        <button id="btnPause" aria-label="Pause the simulation (Space)">⏸️ Pause</button>
+        <span id="pendingChip" class="badge pending-chip" hidden>Changes pending — press Apply</span>
         <label class="small">Speed (ms/tick)
           <input id="speed" type="range" min="16" max="1000" step="1" value="120" title="Increase: Slower simulation speed, easier to follow events, better for detailed observation. Decrease: Faster simulation, more rapid progression, but harder to track individual events.">
         </label>
@@ -464,9 +481,9 @@
         <div class="swatch" style="background:#FF6E6E; margin-left:10px"></div> LYR
         <div class="swatch" style="background:#7AD37A; margin-left:10px"></div> THO
         <div class="swatch" style="background:#FFD166; margin-left:10px"></div> KHA
-        <div class="swatch" style="background:#B66DFF; margin-left:10px"></div> GLA
+        
       </div>
-      <div class="small">Legend: Capitals (★), Resource hexes (two‑letter codes), Neutral (•), Outer Shoals (⚑), Blockade <span class="badge-blocked">blocked</span>.</div>
+      <div class="small">Legend: Capitals (★), Resource hexes (two‑letter codes), Neutral (•), Outer Shoals (⚑). Trade: filled = outgoing (sender), ring = incoming (receiver), <span class="badge-blocked">striped</span> = blocked.</div>
     </div>
 
     <div class="news" id="newsPanel">
@@ -482,7 +499,7 @@
     </div>
   </section>
 
-  <!-- FOOTER: Event Log & Scoreboard -->
+  <!-- FOOTER: Scoreboard (event log removed; events routed to World Newsfeed) -->
   <footer aria-label="Event Log">
     <table aria-label="Civilization HUD" style="margin-bottom: 12px; width: 100%; border-collapse: collapse;">
       <thead>
@@ -500,7 +517,7 @@
       </thead>
       <tbody id="hudRows"></tbody>
     </table>
-    <div id="log" class="log"></div>
+    <!-- Event log removed -->
   </footer>
 </div>
 
@@ -542,6 +559,16 @@ const BALANCE = {
   },
   trade: { seaBonusFromNavy: 0.5, landBonusFromInfra: 0.5, blockadeRadius: 2, straitPenalty: 0.7, minRouteLen: 4,
            convoyDots: 18, raiderStrikeEvery: 120, pressureToRaid: 0.35 },
+  routes: {
+    markerSize: 6,
+    markerRingWidth: 2,
+    hoverGlow: 8,
+    particleCountPerVolume: 10,
+    particleSpeed: 0.35,
+    hoverStrokeMult: 1.8,
+    gradientAlpha: 0.25,
+    maxParticles: 1200
+  },
   diplomacy: { allianceBonus: 0.05, truceTicks: 90, guarantee: true },
              events: { perTickBaseChance: 0.001, weights: { economy:1.2, religion:1.0, war:1.0, culture:1.0, knowledge:1.0, corruption:0.8, outer:1.2 } }
 };
@@ -851,15 +878,6 @@ function makeDefaultCivs(){
       pillars:{ religion:60, government:45, economy:50, knowledge:35, culture:55, social:85,
                 tolerance:50, churchState:40, media:30, cohesion:90, rigidity:70, inequality:60, centralization:40 },
       sec:{ pop:45, urban:35, infra:45, health:50, military:80, aggression:45, diplomacy:55, resources:60, tradeOpen:40, taxCapacity:45 }
-    },
-    { id:'GLA', name:'Glass League', color:'#B66DFF',
-      motto:'"By lattice and ledger, all harbors prosper."', strengths:['Convoy doctrine','Knowledge guilds','Open trade'],
-      religion:'Lattice of Saints', government:'Merchant Council',
-      armyFlavor:'Light marines, pike companies; fast caravels and convoy doctrine',
-      navyFlavor:'Fast caravels; convoy doctrine',
-      pillars:{ religion:45, government:65, economy:85, knowledge:80, culture:70, social:45,
-                tolerance:65, churchState:35, media:70, cohesion:60, rigidity:45, inequality:40, centralization:65 },
-      sec:{ pop:52, urban:78, infra:72, health:68, military:70, aggression:90, diplomacy:80, resources:70, tradeOpen:85, taxCapacity:55 }
     }
   ].map(c=>({ ...c, treasury:BALANCE.economy.baseTreasury, warExhaustion:0,
               externalPressure:25, randomEventIntensity:50,
@@ -1154,14 +1172,15 @@ function moraleFactor(civ){ const mf=BALANCE.military.moraleFromStability*(civ.m
 
 function ownedResources(civId){ const set=new Set(); for(const id of map.resourceHexes){ const h=map.hexes[id]; if(h.owner===civId && h.resource) set.add(h.resource); } return set; }
 function effectiveArmy(civ){
+  // Unified military effectiveness (no army/navy separation)
   let base = civ.sec.military * (civ.pillars.economy/100) * supplyFactor(civ) * moraleFactor(civ);
   if(ownedResources(civ.id).has('Ironwood')) base *= (1 + BALANCE.economy.resourceMultipliers['Ironwood'].army);
+  if(ownedResources(civ.id).has('Sky‑Amber')) base *= (1 + BALANCE.economy.resourceMultipliers['Sky‑Amber'].navy);
   return base/100; // normalized
 }
 function effectiveNavy(civ){
-  let base = civ.sec.military * (civ.pillars.economy/100) * supplyFactor(civ) * moraleFactor(civ);
-  if(ownedResources(civ.id).has('Sky‑Amber')) base *= (1 + BALANCE.economy.resourceMultipliers['Sky‑Amber'].navy);
-  return base/100; // normalized
+  // Backward compatibility: navy equals unified military
+  return effectiveArmy(civ);
 }
 
 function recalcDerived(){
@@ -1232,7 +1251,7 @@ function battleTick(){
 }
 function flipHex(id,newOwner,oldOwner){
   const h=map.hexes[id]; h.owner=newOwner; map.neutralHexes.delete(id);
-  flareAnimations.push({id, t:0});
+  flareAnimations.push({id, t:0, type:'flip', color:'#ff6e6e'});
   getCiv(newOwner).warExhaustion = clamp(getCiv(newOwner).warExhaustion+1.5,0,100);
   getCiv(oldOwner).warExhaustion = clamp(getCiv(oldOwner).warExhaustion+2.0,0,100);
 }
@@ -1270,7 +1289,7 @@ function colonizationTick(){
     col.progress++;
     const hex=map.hexes[col.hexId];
     if(col.progress>=BALANCE.tick.colonizeTicks){
-      hex.owner=col.civId; flareAnimations.push({id:hex.id, t:0, color:'#aee67a'});
+      hex.owner=col.civId; flareAnimations.push({id:hex.id, t:0, color:'#aee67a', type:'colonization_complete'});
       const [x, y] = axialToPixel(hex.q, hex.r, 20);
       logEvent(`🏝️ ${col.civId} established a colony.`, null, {x, y});
       if(!hex.resource && rnd()<0.4){ const rt=pick(['Grain','Ironwood','Auric Salts','Sky‑Amber']); hex.resource=rt; map.resourceHexes.push(hex.id); logEvent(`🔎 ${col.civId} discovered ${rt} at the colony.`, null, {x, y}); }
@@ -1302,7 +1321,7 @@ const EVENTS = [
   {id:'taxReform', title:'Tax Reform', icon:'💰', cat:'government', desc:'Streamlined levies improve compliance.',
    trigger:c=>c.pillars.government>65 && rnd()<0.03, cooldown:120, effects:[{key:'sec.taxCapacity',op:'add',amount:+10,duration:120}]},
   {id:'navalBlockade', title:'Naval Blockade', icon:'⛵', cat:'war', desc:'Enemy squadrons interdict straits.',
-   trigger:c=>c.sec.navy>60 && rnd()<0.03, cooldown:130, effects:[{key:'tradeBlocked',op:'flag',amount:1,duration:70}]},
+   trigger:c=>c.sec.military>60 && rnd()<0.03, cooldown:130, effects:[{key:'tradeBlocked',op:'flag',amount:1,duration:70}]},
   {id:'generalStrike', title:'General Strike', icon:'✊', cat:'economy', desc:'Workers halt mills and ports.',
    trigger:c=>getRigidity(c)<50 && rnd()<0.02, cooldown:120, effects:[{key:'prosperity',op:'add',amount:-8,duration:60},{key:'morale',op:'add',amount:-6,duration:60}]},
   {id:'antiCorruption', title:'Anti‑Corruption Drive', icon:'🧹', cat:'government', desc:'Audits and arrests deter graft.',
@@ -1373,26 +1392,20 @@ function raiderStrike(){
 }
 
 /* ------------------------------ UI / Logging ----------------------------- */
-const logEl=document.getElementById('log');
 function logEvent(title,body,location=null){
   const time=`t${state.tick}`;
-  const div=document.createElement('div'); div.className='log-entry';
-  div.innerHTML=`<div><span class="small">${time}</span> <strong>${title}</strong></div>${body?`<div class="small">${body}</div>`:''}`;
-  while(logEl.children.length>200) logEl.removeChild(logEl.firstChild);
-  logEl.appendChild(div); logEl.scrollTop=logEl.scrollHeight;
-  
-  // Add to news feed if it's a significant event
-  if (title.includes('🔥') || title.includes('⚔️') || title.includes('🌟') || title.includes('🧭') || title.includes('🏝️') || title.includes('🔎')) {
-    if (!state.newsEvents) state.newsEvents = [];
-    state.newsEvents.unshift({ time, title, body, location });
-    if (state.newsEvents.length > 50) state.newsEvents.pop(); // Keep only recent events
+  // Route all events to newsfeed (latest on top)
+  if (!state.newsEvents) state.newsEvents = [];
+  state.newsEvents.unshift({ time, title, body, location });
+  if (state.newsEvents.length > 200) state.newsEvents.pop();
+  if (typeof renderWorldSummary === 'function') {
+    renderWorldSummary();
   }
-  
-  // Add to map events if location is provided
+
+  // Keep location markers for map visuals
   if (location && !state.mapEvents) state.mapEvents = [];
   if (location) {
     state.mapEvents.push({ time, title, x: location.x, y: location.y, tick: state.tick });
-    // Keep only recent map events (last 20)
     if (state.mapEvents.length > 20) state.mapEvents.shift();
   }
 }
@@ -1465,27 +1478,40 @@ function renderIdentityCards(){
 }
 
 /* ------------------------------ Controls bind ---------------------------- */
+// No auto-apply: keep helper in case Apply should force recompute later
+function immediateRefresh(){
+  updateTrade();
+  recalcDerived();
+  renderWorldSummary();
+  updateHUD();
+  draw();
+}
 const speed=document.getElementById('speed'), speedVal=document.getElementById('speedVal');
 const rngAmt=document.getElementById('rngAmt'), rngVal=document.getElementById('rngVal');
-const btnRun=document.getElementById('btnRun'), btnStep=document.getElementById('btnStep');
+const btnStart=document.getElementById('btnStart'), btnPause=document.getElementById('btnPause');
+const btnApplyChanges=document.getElementById('btnApplyChanges');
+const pendingChip=document.getElementById('pendingChip');
 const seedInput=document.getElementById('seed'), btnReseed=document.getElementById('btnReseed');
 const presetSel=document.getElementById('preset'), btnApplyPreset=document.getElementById('btnApplyPreset');
 const toggleProtector=document.getElementById('toggleProtector');
 const allyPressure=document.getElementById('allyPressure');
 const testMode=document.getElementById('testMode'), debugOverlay=document.getElementById('debugOverlay');
 
-speed.addEventListener('input',()=>{ speedVal.textContent=speed.value; BALANCE.tick.ms=+speed.value; });
-rngAmt.addEventListener('input',()=>{ rngVal.textContent=rngAmt.value; state.randomness=(+rngAmt.value)/100; });
-btnRun.addEventListener('click',()=>{ state.running=!state.running; btnRun.textContent=state.running?'⏸️ Pause':'▶️ Start'; });
-btnStep.addEventListener('click',()=>{ tick(); draw(); });
+let pending=false;
+function markPending(){ pending=true; btnApplyChanges.disabled=false; pendingChip.hidden=false; }
+function clearPending(){ pending=false; btnApplyChanges.disabled=true; pendingChip.hidden=true; }
+speed.addEventListener('input',()=>{ speedVal.textContent=speed.value; markPending(); });
+rngAmt.addEventListener('input',()=>{ rngVal.textContent=rngAmt.value; markPending(); });
+btnStart.addEventListener('click',()=>{ state.running=true; });
+btnPause.addEventListener('click',()=>{ state.running=false; });
+btnApplyChanges.addEventListener('click',()=>{ BALANCE.tick.ms=+speed.value; state.randomness=(+rngAmt.value)/100; clearPending(); });
 btnReseed.addEventListener('click',()=>{ reseed(seedInput.value); state.tick=0; logEvent('🔁 Reseeded RNG.', seedInput.value); });
 btnApplyPreset.addEventListener('click',()=>{ applyPreset(presetSel.value); });
 testMode.addEventListener('change',()=>{ state.showTest=testMode.checked; debugOverlay.hidden=!state.showTest; });
 toggleProtector.addEventListener('change',()=>{ BALANCE.diplomacy.guarantee=toggleProtector.checked; });
 
 document.addEventListener('keydown',(e)=>{
-  if(e.code==='Space'){ e.preventDefault(); btnRun.click(); }
-  if(e.key==='n'||e.key==='N'){ e.preventDefault(); btnStep.click(); }
+  if(e.code==='Space'){ e.preventDefault(); if(state.running){ btnPause.click(); } else { btnStart.click(); } }
   if(e.key==='t'||e.key==='T'){ e.preventDefault(); testMode.checked=!testMode.checked; testMode.dispatchEvent(new Event('change')); }
 });
 
@@ -1527,6 +1553,8 @@ function getPathValue(obj,path){ const p=path.split('.'); let v=obj; for(const k
 function setPathValue(obj,path,val){ const p=path.split('.'); let v=obj; for(let i=0;i<p.length-1;i++) v=v[p[i]]; v[p[p.length-1]]=val; }
 function populateSliders(civ){
   selCivName.textContent=civ.name;
+  // Set global accent color to selected civ color for visual feedback
+  document.documentElement.style.setProperty('--accent', civ.color || '#4FA3FF');
   civ.sec.taxCapacity ??= 50; civ.sec.agri ??= civ.pillars.economy; civ.sec.industry ??= civ.pillars.economy;
   for(const [id,path] of bindings){
     const el=sliderEls[id], badge=sliderEls['val_'+id];
@@ -1536,7 +1564,7 @@ function populateSliders(civ){
 }
 for(const [id,path] of bindings){
   const el=sliderEls[id]; if(!el) continue;
-  el.addEventListener('input',()=>{ const civ=getCiv(civSel.value); setPathValue(civ,path,+el.value); sliderEls['val_'+id].textContent=el.value; });
+  el.addEventListener('input',()=>{ const civ=getCiv(civSel.value); setPathValue(civ,path,+el.value); sliderEls['val_'+id].textContent=el.value; markPending(); });
 }
 
 /* ----------------------------- Save / Load ------------------------------- */
@@ -1777,6 +1805,7 @@ function drawFronts(){
 
 function drawRoutes(){
   ctx.save(); const R=BALANCE.geography.hexRadius;
+  const paused = !state.running;
   for(const route of state.routes){
     // path polyline
     let prev=null; ctx.beginPath();
@@ -1787,6 +1816,21 @@ function drawRoutes(){
     ctx.strokeStyle = route.type==='sea' ? 'rgba(100,180,255,0.35)' : 'rgba(240,210,120,0.35)';
     ctx.lineWidth=1.6; ctx.stroke();
 
+    // Markers: origin (filled) & destination (ring)
+    const senderId = map.hexes[route.from].owner;
+    const recvId = map.hexes[route.to].owner;
+    const sender = getCiv(senderId); const receiver=getCiv(recvId);
+    const pathPts=route.via.map(id=>axialToPixel(map.hexes[id].q,map.hexes[id].r,R));
+    const pathSegLens=[], pathCum=[0]; for(let i=1;i<pathPts.length;i++){ const d=Math.hypot(pathPts[i][0]-pathPts[i-1][0], pathPts[i][1]-pathPts[i-1][1]); pathSegLens.push(d); pathCum.push(pathCum[i-1]+d); }
+    const pathTotal=pathCum[pathCum.length-1]||1;
+    function pointAt(t){ const dist=t*pathTotal; let idx=pathSegLens.findIndex((len,i)=>pathCum[i+1]>dist); if(idx<0) idx=pathSegLens.length-1; const segStart=pathCum[idx], segLen=pathSegLens[idx]||1, segT=(dist-segStart)/segLen; const [x1,y1]=pathPts[idx], [x2,y2]=pathPts[idx+1]||pathPts[idx]; return [lerp(x1,x2,segT), lerp(y1,y2,segT)]; }
+    const [ox,oy]=pointAt(0.10), [dx,dy]=pointAt(0.90);
+    const ms=BALANCE.routes.markerSize, rw=BALANCE.routes.markerRingWidth;
+    // origin filled
+    if(sender){ ctx.fillStyle=sender.color; ctx.beginPath(); ctx.arc(ox,oy,ms,0,Math.PI*2); ctx.fill(); }
+    // destination ring
+    if(receiver){ ctx.strokeStyle=receiver.color; ctx.lineWidth=rw; ctx.beginPath(); ctx.arc(dx,dy,ms+rw,0,Math.PI*2); ctx.stroke(); }
+
     // blockade badge
     if(route.blocked && route.blockadeAt!=null){
       const h=map.hexes[route.blockadeAt]; const [bx,by]=axialToPixel(h.q,h.r,R);
@@ -1794,16 +1838,14 @@ function drawRoutes(){
       ctx.save(); ctx.translate(bx+4,by-6); ctx.scale(0.8,0.8); ctx.fillStyle='rgba(255,110,110,0.9)'; ctx.font='bold 12px system-ui'; ctx.fillText('blocked',0,0); ctx.restore();
     }
 
-    // convoy dots
-    const pts=route.via.map(id=>axialToPixel(map.hexes[id].q,map.hexes[id].r,R));
-    const segLens=[], cum=[0]; for(let i=1;i<pts.length;i++){ const d=Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); segLens.push(d); cum.push(cum[i-1]+d); }
-    const total=cum[cum.length-1]||1;
+    // convoy/flow dots (sender color)
     for(const dot of route.convoys){
-      dot.t += BALANCE.tick.convoySpeed * (route.blocked?0.3:1); if(dot.t>1){ dot.t-=1; dot.raided=false; }
-      const dist=dot.t*total; let idx=segLens.findIndex((len,i)=>cum[i+1]>dist); if(idx<0) idx=segLens.length-1;
-      const segStart=cum[idx], segLen=segLens[idx]||1, segT=(dist-segStart)/segLen;
-      const [x1,y1]=pts[idx], [x2,y2]=pts[idx+1]||pts[idx]; const x=lerp(x1,x2,segT), y=lerp(y1,y2,segT);
-      ctx.fillStyle = route.type==='sea' ? (dot.raided?'#ff9e9e':'#a9d4ff') : (dot.raided?'#ffd49e':'#f2e2a4');
+      const speedMul = (route.blocked||paused)?0.0:1.0; // pause on blocked or paused
+      dot.t += BALANCE.tick.convoySpeed * speedMul; if(dot.t>1){ dot.t-=1; dot.raided=false; }
+      const dist=dot.t*pathTotal; let idx=pathSegLens.findIndex((len,i)=>pathCum[i+1]>dist); if(idx<0) idx=pathSegLens.length-1;
+      const segStart=pathCum[idx], segLen=pathSegLens[idx]||1, segT=(dist-segStart)/segLen;
+      const [x1,y1]=pathPts[idx], [x2,y2]=pathPts[idx+1]||pathPts[idx]; const x=lerp(x1,x2,segT), y=lerp(y1,y2,segT);
+      ctx.fillStyle = sender?sender.color:'#a9d4ff';
       ctx.beginPath(); ctx.arc(x,y,1.8,0,Math.PI*2); ctx.fill();
       if(dot.flash>0){ ctx.strokeStyle='rgba(255,110,110,'+dot.flash+')'; ctx.beginPath(); ctx.arc(x,y,4+2*dot.flash,0,Math.PI*2); ctx.stroke(); dot.flash=Math.max(0,dot.flash-0.08); }
     }
@@ -1898,12 +1940,36 @@ function draw(){
   drawFronts();
   drawRoutes();
 
+  // Aggression flags near capitals
+  for(const [civId, capId] of map.capitals){
+    const civ = getCiv(civId); if(!civ) continue;
+    const [x,y]=axialToPixel(map.hexes[capId].q, map.hexes[capId].r, R);
+    const ag = clamp(civ.sec.aggression, 0, 100);
+    const size = 6 + ag*0.06; // 6..12px
+    const alpha = 0.6 + ag*0.004; // 0.6..1.0
+    ctx.save();
+    ctx.translate(x+R*0.6, y-R*0.6);
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.fillStyle = ag>66 ? '#ff6e6e' : (ag>33 ? '#ffd166' : '#7AD37A');
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(size, -size*0.5);
+    ctx.lineTo(0, -size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
   // Colonization halos
   for(const col of state.colonizations){
     const h=map.hexes[col.hexId]; const [x,y]=axialToPixel(h.q,h.r,R);
     const t=(col.progress/BALANCE.tick.colonizeTicks);
     ctx.strokeStyle=`rgba(174,230,122,${0.9-t*0.7})`; ctx.lineWidth=2;
     ctx.beginPath(); ctx.arc(x,y, R*(0.6 + 0.4*Math.sin(state.tick/10)), 0, Math.PI*2); ctx.stroke();
+    // pulsing flash ring to make expansion obvious
+    ctx.strokeStyle=`rgba(174,230,122,${0.4 + 0.3*Math.sin(state.tick/8)})`;
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(x,y, R*(0.9 + 0.1*Math.sin(state.tick/6)), 0, Math.PI*2); ctx.stroke();
   }
 
   // Battle flares
@@ -1981,10 +2047,12 @@ const btnExpandNews = document.getElementById('btnExpandNews');
 const newsResizeHandle = document.getElementById('newsResizeHandle');
 
 // Expand/collapse functionality
-btnExpandNews.addEventListener('click', () => {
-  newsPanel.classList.toggle('expanded');
-  btnExpandNews.textContent = newsPanel.classList.contains('expanded') ? '⤢' : '⤢';
-});
+if (btnExpandNews) {
+  btnExpandNews.addEventListener('click', () => {
+    newsPanel.classList.toggle('expanded');
+    btnExpandNews.textContent = newsPanel.classList.contains('expanded') ? '⤢' : '⤢';
+  });
+}
 
 // Resize functionality
 let isResizing = false;
@@ -2098,6 +2166,17 @@ if (document.readyState === 'loading') {
 }
 
 /* ----------------------------- Initialization ---------------------------- */
+function propagateControlTooltips(){
+  // For each row in the top controls and sliders section, propagate the title
+  // found on inputs/selects/buttons to the row container so hovering anywhere
+  // on the row shows the tooltip.
+  const rows = document.querySelectorAll('.row');
+  rows.forEach(row => {
+    if (row.getAttribute('title')) return;
+    const el = row.querySelector('input[title], select[title], button[title], label[title]');
+    if (el && el.title) row.setAttribute('title', el.title);
+  });
+}
 const idCards=document.getElementById('idCards');
 function rebuildCivSelection(){ civSel.innerHTML=''; for(const c of state.civs){ const o=document.createElement('option'); o.value=c.id; o.textContent=`${c.id} — ${c.name}`; civSel.appendChild(o); } }
 
@@ -2125,7 +2204,9 @@ function start(){
   reseed(document.getElementById('seed').value);
   applyPreset('tess');
   state.running=true; 
-  btnRun.textContent='⏸️ Pause';
+  if (typeof btnPause!=='undefined' && btnPause) { /* noop ensure defined */ }
+  // Ensure tooltips are visible when hovering anywhere in a control row/label
+  propagateControlTooltips();
   
   // Force a redraw after a short delay to ensure everything is loaded
   setTimeout(() => {

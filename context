@@ -1,0 +1,117 @@
+This document explains the simulation’s world, variables, and formulas so Cursor can “think with context” when helping implement features. It maps directly to fields and functions in the single‑file HTML app.
+
+---
+
+## 🌍 The World & Civilizations
+
+- **Geography:** A ring of lands around the **Tesselated Sea** with chokepoint straits, coastal trade, interior rivers, and a hazardous outer ocean (**Outer Shoals**).  
+- **Ambient Threat:** The Outer Shoals create raids, storms, and piracy that apply **External Pressure** to coastal powers.
+
+**Civilizations (default preset: `tess`):**
+
+1. **SAL** — *The Salanic Empire* (color `#4FA3FF`)  
+   - **Religion:** Imperial Cult · **Government:** Iron‑fisted Monarchy  
+   - **Defaults (Pillars):** Religion 75, Government 90, Economy 70, Knowledge 85, Culture 60, Social 70  
+   - **Defaults (Secondary):** Pop 60, Urban 65, Infra 75, Health 65, Army 85, Navy 70, Diplomacy 60, Resources 75, TradeOpen 55, Tax 80
+
+2. **LYR** — *Kingdom of Lyrica* (color `#FF6E6E`)  
+   - **Religion:** Divine Kingship · **Government:** Theocratic Monarchy  
+   - **Pillars:** 95, 80, 65, 55, 85, 75
+
+3. **THO** — *Republic of Thornwall* (color `#7AD37A`)  
+   - **Religion:** Rational Humanism · **Government:** Merchant Council Republic  
+   - **Pillars:** 40, 70, 85, 80, 70, 60
+
+4. **KHA** — *Khaldur Nomad Clans* (color `#FFD166`)  
+   - **Religion:** Shamanistic Animism · **Government:** Tribal Confederation  
+   - **Pillars:** 60, 45, 50, 35, 55, 85
+
+5. **GLA** — *Glass League* (color `#B66DFF`)  
+   - **Religion:** Lattice of Saints · **Government:** Merchant Council  
+   - **Pillars:** 45, 65, 85, 80, 70, 45
+
+---
+
+## 🏛️ Civilizational Pillars (Sliders)
+
+Each civ has six sliders (0–100) that define it. Adjusting them changes outcomes.
+
+### A) Religion & Culture
+- **Religious Unity ↔ Pluralism** — ↑ Unity = +Cohesion, +Morale; ↓ Unity = +Pluralism, +Innovation but risk of unrest.  
+- **Tolerance** — ↑ = +Trade, +Diplomacy, +Innovation; ↓ = cultural rigidity, unrest.  
+- **Church–State Integration** — ↑ Stability; ↓ = secular freedom, less cohesion.
+
+### B) Government & Institutions
+- **Centralization** — ↑ Mobilization/tax; over‑centralization reduces Cohesion.  
+- **Rule of Law** — ↑ = −Corruption, +Logistics, +Stability.  
+- **Tax Capacity** — ↑ Treasury; very high depresses morale.
+
+### C) Goods & Economy
+- **Agricultural Surplus** — baseline Prosperity & support.  
+- **Industrialization** — converts surplus into tech & military.  
+- **Trade Openness** — ↑ Growth; vulnerable to blockades.  
+- **Resource Endowment (0–200)** — more metals/energy = stronger industry/upkeep.
+
+### D) Writing, Literacy & Knowledge
+- **Literacy** — admin/logistics/research.  
+- **Media** — spreads ideas; dissent risk.  
+- **Universities** — accelerates innovation & culture.
+
+### E) Arts & Cultural Capital
+- **Patronage** — +Soft Power, +Morale, treasury drain.  
+- **Cultural Prestige** — diplomacy & trade bonus.
+
+### F) Social Structure
+- **Rigidity** — stability now; less innovation.  
+- **Inequality** — fuels growth until thresholds; high unrest.  
+- **Cohesion** — morale & resilience; very high suppresses diversity.
+
+---
+
+## 📊 Derived Indices
+
+- **Prosperity** = weighted Agri + Industry + Trade + Resources + Infra + Law + Health − WarPenalty  
+- **Stability/Morale** = Cohesion + RuleOfLaw + Prosperity + ReligiousUnity + Patronage − (Inequality + Rigidity + TaxBurden + Conflict + WarExhaustion)  
+- **Innovation** = Literacy + Universities + Media + Trade + Urban + Tolerance − RigidityPenalty  
+- **Soft Power** = 0.4*CulturalPrestige + 0.35*Diplomacy + 0.15*TradeOpen + 0.10*RuleOfLaw  
+- **Military Effectiveness** = Army/Navy × Economy × Supply × Morale × Resource bonuses
+
+---
+
+## ⚔️ War, Colonization, Trade
+
+- **War:** Adjacent hexes contested if civs at war. Battles flip hexes with flare animations.  
+- **Colonization:** Civs with Prosperity, Morale, Navy/Army above thresholds can claim neutral hexes (animated halo).  
+- **Trade:** Capitals ↔ resources & capitals. Convoys animate; throughput depends on TradeOpenness, Infra, Stability, Navy. Blockades reduce throughput.
+
+---
+
+## 📜 Events
+
+Events are inline JSON objects with conditions + effects. Examples:  
+- Religious Schism, Revival, Harvest Failure, Industrial Boom, Golden Age, Naval Blockade, Colonial Uprising, Peace Conference.
+
+---
+
+## 📰 Newsfeed
+
+Every few ticks, the sim outputs a **3–6 line summary**: who’s at war, richest civ, top trader, colonization attempts, morale/innovation leaders, blockades, etc.  
+
+This feeds into the **World Newsfeed** UI and can be copied to clipboard.
+
+---
+
+## 🔧 Developer Notes
+
+- All constants in `BALANCE` object (easy to tweak).  
+- Pure functions for computing indices (safe for previews).  
+- Single‑file HTML = no dependencies.  
+- Cursor can use this doc as **domain knowledge** when editing/adding features.
+
+**End of Context Document**
+"""
+
+with open("/mnt/data/tess_sim_cursor_context_singleblock.md", "w", encoding="utf-8") as f:
+    f.write(context_block)
+
+"/mnt/data/tess_sim_cursor_context_singleblock.md"
